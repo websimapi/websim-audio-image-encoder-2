@@ -5,6 +5,8 @@ class Encoder {
     constructor() {
         this.canvas = document.createElement('canvas');
         this.ctx = this.canvas.getContext('2d');
+        // Define header size (in pixels)
+        this.HEADER_PIXELS = 10; // First 10 pixels used for header
     }
 
     /**
@@ -25,63 +27,75 @@ class Encoder {
         const imageData = this.ctx.getImageData(0, 0, this.canvas.width, this.canvas.height);
         const data = imageData.data;
 
-        // Calculate how many pixels we have available
+        // Calculate how many pixels we have available for audio data
         const totalPixels = this.canvas.width * this.canvas.height;
+        const availablePixels = totalPixels - this.HEADER_PIXELS;
         
-        // Calculate optimal pixel skip rate based on audio data size
-        // The larger the audio data relative to the image, the smaller the skip rate
-        const audioToImageRatio = audioData.length / (totalPixels * 3);
+        // Calculate optimal data distribution
+        // Each pixel can store 3 bytes (R,G,B channels)
+        const totalDataCapacity = availablePixels * 3; 
+        const spreadFactor = Math.floor(totalDataCapacity / audioData.length);
         
-        // Calculate skip rate: more spread out for smaller files, tighter for larger files
-        // Minimum skip is 1 (use every pixel), max is 20 (use 1 in every 20 pixels)
-        const skipRate = Math.max(1, Math.min(20, Math.floor(1 / audioToImageRatio) || 1));
-        
-        // Calculate max bytes we can store with this skip rate
-        const maxBytes = Math.floor(totalPixels * 3 / skipRate);
-        
-        if (audioData.length > maxBytes) {
-            throw new Error(`Audio file too large: can store ${maxBytes} bytes, but audio data is ${audioData.length} bytes`);
+        // Ensure we have enough capacity
+        if (spreadFactor < 1) {
+            throw new Error(`Audio file too large: can store ${totalDataCapacity} bytes, but audio data is ${audioData.length} bytes`);
         }
-
-        // Define metadata structure
-        const metadata = {
-            skipRate: skipRate,
-            audioLength: audioData.length,
-            startOffset: 32 // Where the actual audio data begins in pixels
-        };
         
-        // Convert metadata to bytes (32 bytes reserved for metadata)
-        const metadataBuffer = new ArrayBuffer(32);
-        const metadataView = new DataView(metadataBuffer);
+        // Create header data - RGBA format (we'll use RGB channels, leave A unchanged)
+        // Structure:
+        // Pixel 0: Magic number "EAI" (Encoded Audio Image) [69, 65, 73]
+        // Pixel 1: Format version [1, 0, 0]
+        // Pixel 2-3: Audio data length (4 bytes - 2 pixels, 2 bytes each) 
+        // Pixel 4: Spread factor [spreadFactor, 0, 0]
+        // Pixel 5-9: Reserved for future use
         
-        // Store metadata in first 32 bytes
-        metadataView.setUint32(0, metadata.skipRate, true);     // 0-3: Skip rate
-        metadataView.setUint32(4, metadata.audioLength, true);  // 4-7: Audio data length
-        metadataView.setUint32(8, metadata.startOffset, true);  // 8-11: Start offset
-        // 12-31: Reserved for future use
+        // Pixel 0: Magic number
+        data[0] = 69; // 'E'
+        data[1] = 65; // 'A'
+        data[2] = 73; // 'I'
         
-        // Write metadata to image
-        const metadataBytes = new Uint8Array(metadataBuffer);
-        for (let i = 0; i < metadataBytes.length; i++) {
-            // Each byte goes to one color channel, cycling through R,G,B
-            const pixelIndex = Math.floor(i / 3) * 4; // *4 because RGBA
-            const channelOffset = i % 3;              // 0=R, 1=G, 2=B
-            data[pixelIndex + channelOffset] = metadataBytes[i];
-        }
-
-        // Encode audio data into pixels using the calculated skip rate
+        // Pixel 1: Version
+        data[4] = 1;  // Major version
+        data[5] = 0;  // Minor version
+        data[6] = 0;  // Patch version
+        
+        // Pixel 2-3: Audio data length (32-bit value)
+        const lengthBytes = new Uint8Array(4);
+        new DataView(lengthBytes.buffer).setUint32(0, audioData.length, true);
+        data[8] = lengthBytes[0];   // Length byte 0
+        data[9] = lengthBytes[1];   // Length byte 1
+        data[10] = lengthBytes[2];  // Length byte 2
+        data[12] = lengthBytes[3];  // Length byte 3
+        
+        // Pixel 4: Spread factor
+        data[16] = spreadFactor;
+        data[17] = 0; // Reserved
+        data[18] = 0; // Reserved
+        
+        // Pixels 5-9: Reserved for future use
+        // We keep these unchanged for now
+        
+        // Encode audio data - start after header section
+        // We'll distribute bytes evenly based on the spread factor
         let audioByteIndex = 0;
-        const startPixel = metadata.startOffset;
+        let pixelStart = this.HEADER_PIXELS * 4; // Skip header pixels * 4 (RGBA)
         
-        // We'll use all three color channels (R,G,B) of selected pixels
-        for (let pixelIndex = startPixel * 4; pixelIndex < data.length - 4; pixelIndex += (skipRate * 4)) {
-            if (audioByteIndex >= audioData.length) break;
+        while (audioByteIndex < audioData.length && pixelStart < data.length) {
+            // Store byte in R channel
+            data[pixelStart] = audioData[audioByteIndex++];
             
-            // Use RGB components (skip alpha)
-            if (audioByteIndex < audioData.length) data[pixelIndex + 0] = audioData[audioByteIndex++]; // R
-            if (audioByteIndex < audioData.length) data[pixelIndex + 1] = audioData[audioByteIndex++]; // G
-            if (audioByteIndex < audioData.length) data[pixelIndex + 2] = audioData[audioByteIndex++]; // B
-            // Alpha is untouched
+            // If we have more audio data, store in G channel
+            if (audioByteIndex < audioData.length) {
+                data[pixelStart + 1] = audioData[audioByteIndex++];
+            }
+            
+            // If we have more audio data, store in B channel
+            if (audioByteIndex < audioData.length) {
+                data[pixelStart + 2] = audioData[audioByteIndex++];
+            }
+            
+            // Move to next pixel position based on spread factor
+            pixelStart += 4 * spreadFactor; // Move ahead by spreadFactor pixels
         }
 
         // Put the modified image data back to the canvas
@@ -108,43 +122,68 @@ class Encoder {
             const imageData = this.ctx.getImageData(0, 0, this.canvas.width, this.canvas.height);
             const data = imageData.data;
     
-            // Read metadata from first 32 bytes (first ~11 pixels)
-            const metadataBuffer = new ArrayBuffer(32);
-            const metadataBytes = new Uint8Array(metadataBuffer);
-            
-            for (let i = 0; i < metadataBytes.length; i++) {
-                const pixelIndex = Math.floor(i / 3) * 4; // *4 because RGBA
-                const channelOffset = i % 3;              // 0=R, 1=G, 2=B
-                metadataBytes[i] = data[pixelIndex + channelOffset];
+            // Read header from first pixels
+            // Check magic number
+            if (!(data[0] === 69 && data[1] === 65 && data[2] === 73)) {
+                throw new Error("Invalid encoded image: Missing magic number");
             }
             
-            const metadataView = new DataView(metadataBuffer);
-            const skipRate = metadataView.getUint32(0, true);
-            const audioDataLength = metadataView.getUint32(4, true);
-            const startOffset = metadataView.getUint32(8, true);
+            // Read version
+            const version = {
+                major: data[4],
+                minor: data[5],
+                patch: data[6]
+            };
             
-            // Validate the metadata to avoid buffer allocation issues
-            if (audioDataLength <= 0 || audioDataLength > 100000000) { // 100MB limit as sanity check
-                throw new Error("Invalid audio data length in metadata");
+            // Check version compatibility
+            if (version.major > 1) {
+                throw new Error(`Unsupported encoding version: ${version.major}.${version.minor}.${version.patch}`);
             }
             
-            if (skipRate <= 0 || skipRate > 100) { // Sanity check for skip rate
-                throw new Error("Invalid skip rate in metadata");
+            // Read audio data length
+            const lengthBytes = new Uint8Array(4);
+            lengthBytes[0] = data[8];
+            lengthBytes[1] = data[9];
+            lengthBytes[2] = data[10];
+            lengthBytes[3] = data[12];
+            
+            const audioDataLength = new DataView(lengthBytes.buffer).getUint32(0, true);
+            
+            // Read spread factor
+            const spreadFactor = data[16];
+            
+            // Validate the data
+            if (audioDataLength <= 0 || audioDataLength > 100000000) { // 100MB sanity check
+                throw new Error("Invalid audio data length in header");
+            }
+            
+            if (spreadFactor <= 0 || spreadFactor > 1000) { // Sanity check
+                throw new Error("Invalid spread factor in header");
             }
     
-            // Extract the audio data in smaller chunks to avoid memory issues
+            // Extract the audio data
             const audioData = new Uint8Array(audioDataLength);
             let audioByteIndex = 0;
             
-            // Start at the specified offset and apply the skip rate
-            for (let pixelIndex = startOffset * 4; 
-                pixelIndex < data.length - 4 && audioByteIndex < audioDataLength; 
-                pixelIndex += (skipRate * 4)) {
+            // Start after header
+            let pixelStart = this.HEADER_PIXELS * 4; // Skip header pixels
+            
+            while (audioByteIndex < audioDataLength && pixelStart < data.length) {
+                // Extract from R channel
+                audioData[audioByteIndex++] = data[pixelStart];
                 
-                // Extract from RGB channels
-                audioData[audioByteIndex++] = data[pixelIndex + 0]; // R
-                if (audioByteIndex < audioDataLength) audioData[audioByteIndex++] = data[pixelIndex + 1]; // G
-                if (audioByteIndex < audioDataLength) audioData[audioByteIndex++] = data[pixelIndex + 2]; // B
+                // Extract from G channel if needed
+                if (audioByteIndex < audioDataLength) {
+                    audioData[audioByteIndex++] = data[pixelStart + 1];
+                }
+                
+                // Extract from B channel if needed
+                if (audioByteIndex < audioDataLength) {
+                    audioData[audioByteIndex++] = data[pixelStart + 2];
+                }
+                
+                // Move to next pixel with spread factor
+                pixelStart += 4 * spreadFactor;
             }
     
             return audioData;
