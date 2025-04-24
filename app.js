@@ -177,14 +177,19 @@ document.addEventListener('DOMContentLoaded', () => {
             // Wait for image to load
             await new Promise(resolve => { img.onload = resolve; });
             
-            // Decode audio from the image
-            const decodedData = encoder.decodeAudioFromImage(img);
-            
-            // Create audio from decoded data
-            const result = audioHandler.createAudioFromDecodedData(decodedData);
-            
-            // Play the audio
-            await audioHandler.playAudioBuffer(result.audioBuffer);
+            try {
+                // Decode audio from the image
+                const decodedData = encoder.decodeAudioFromImage(img);
+                
+                // Create audio from decoded data
+                const result = audioHandler.createAudioFromDecodedData(decodedData);
+                
+                // Play the audio
+                await audioHandler.playAudioBuffer(result.audioBuffer);
+            } catch (err) {
+                console.error('Error processing encoded audio:', err);
+                alert('Error processing encoded audio: ' + err.message);
+            }
             
         } catch (error) {
             console.error('Error playing encoded audio:', error);
@@ -246,23 +251,28 @@ document.addEventListener('DOMContentLoaded', () => {
             uploadedEncodedImage.src = URL.createObjectURL(file);
             uploadedEncodedImage.classList.remove('hidden');
             
-            // Decode audio from the image
-            const decodedData = encoder.decodeAudioFromImage(img);
-            
-            // Create audio from decoded data
-            const result = audioHandler.createAudioFromDecodedData(decodedData);
-            decodedAudioBuffer = result.audioBuffer;
-            
-            // Update the audio element
-            const audioBlob = audioHandler.audioBufferToWav(result.audioBuffer);
-            extractedAudio.src = URL.createObjectURL(audioBlob);
-            
-            // Show download button
-            extractedControls.classList.remove('hidden');
+            try {
+                // Decode audio from the image
+                const decodedData = encoder.decodeAudioFromImage(img);
+                
+                // Create audio from decoded data
+                const result = audioHandler.createAudioFromDecodedData(decodedData);
+                decodedAudioBuffer = result.audioBuffer;
+                
+                // Update the audio element
+                const audioBlob = audioHandler.audioBufferToWav(result.audioBuffer);
+                extractedAudio.src = URL.createObjectURL(audioBlob);
+                
+                // Show download button
+                extractedControls.classList.remove('hidden');
+            } catch (err) {
+                console.error('Error decoding audio from image:', err);
+                alert('Error extracting audio: ' + err.message);
+            }
             
         } catch (error) {
-            console.error('Error decoding audio from image:', error);
-            alert('Failed to decode audio from image: ' + error.message);
+            console.error('Error loading encoded image:', error);
+            alert('Failed to load image: ' + error.message);
         }
     }
     
@@ -299,4 +309,3 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 });
-
