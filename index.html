@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Audio-Image Encoder</title>
+    <link rel="stylesheet" href="styles.css">
+    <script>
+        // Import map for any CDN libraries we might need
+        const importMap = {
+            imports: {
+                "tone": "https://cdn.skypack.dev/tone",
+            }
+        };
+        document.head.appendChild(Object.assign(document.createElement("script"), {
+            type: "importmap",
+            textContent: JSON.stringify(importMap)
+        }));
+    </script>
+</head>
+<body>
+    <div class="container">
+        <h1>Audio-Image Encoder</h1>
+        
+        <div class="tabs">
+            <button class="tab-btn active" data-tab="encode">Encode Audio to Image</button>
+            <button class="tab-btn" data-tab="decode">Decode Audio from Image</button>
+        </div>
+        
+        <div class="tab-content" id="encode-tab">
+            <div class="section">
+                <h2>1. Upload Audio File</h2>
+                <input type="file" id="audio-upload" accept="audio/*">
+                <div id="audio-preview-container">
+                    <audio id="audio-preview" controls></audio>
+                </div>
+            </div>
+            
+            <div class="section">
+                <h2>2. Describe Your Image</h2>
+                <textarea id="image-description" placeholder="Describe the image you want to generate..."></textarea>
+                <div class="aspect-ratio-selector">
+                    <label>Aspect Ratio:</label>
+                    <select id="aspect-ratio">
+                        <option value="1:1" selected>1:1 (Square)</option>
+                        <option value="16:9">16:9 (Landscape)</option>
+                        <option value="9:16">9:16 (Portrait)</option>
+                        <option value="4:3">4:3</option>
+                        <option value="3:2">3:2</option>
+                    </select>
+                </div>
+                <button id="generate-btn" disabled>Generate Encoded Image</button>
+            </div>
+            
+            <div class="section" id="result-section">
+                <h2>3. Result</h2>
+                <div id="loading-indicator" class="hidden">
+                    <div class="spinner"></div>
+                    <p>Processing...</p>
+                </div>
+                <div id="encoded-image-container">
+                    <img id="encoded-image" class="hidden">
+                </div>
+                <div class="controls hidden" id="result-controls">
+                    <button id="play-encoded-audio">Play Audio</button>
+                    <button id="download-encoded-image">Download Encoded Image</button>
+                </div>
+            </div>
+        </div>
+        
+        <div class="tab-content hidden" id="decode-tab">
+            <div class="section">
+                <h2>Upload Encoded Image</h2>
+                <input type="file" id="encoded-image-upload" accept="image/*">
+                <div id="uploaded-image-container">
+                    <img id="uploaded-encoded-image" class="hidden">
+                </div>
+            </div>
+            
+            <div class="section">
+                <h2>Extracted Audio</h2>
+                <div id="extracted-audio-container">
+                    <audio id="extracted-audio" controls></audio>
+                </div>
+                <div class="controls hidden" id="extracted-controls">
+                    <button id="download-extracted-audio">Download Audio</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="audio-handler.js"></script>
+    <script src="image-generator.js"></script>
+    <script src="encoder.js"></script>
+    <script src="app.js"></script>
+<script defer src="https://static.cloudflareinsights.com/beacon.min.js/v8c78df7c7c0f484497ecbca7046644da1771523124516" integrity="sha512-8DS7rgIrAmghBFwoOTujcf6D9rXvH8xm8JQ1Ja01h9QX8EzXldiszufYa4IFfKdLUKTTrnSFXLDkUEOTrZQ8Qg==" data-cf-beacon='{"version":"2024.11.0","token":"4c6229722a6346bc8eb5cb0e5eae5d41","server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>
+</body>
+</html>
+

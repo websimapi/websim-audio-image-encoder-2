@@ -1,0 +1,161 @@
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    line-height: 1.6;
+    color: #333;
+    background: #f7f9fc;
+}
+
+.container {
+    max-width: 1000px;
+    margin: 0 auto;
+    padding: 2rem;
+}
+
+h1 {
+    text-align: center;
+    margin-bottom: 2rem;
+    color: #2c3e50;
+}
+
+h2 {
+    margin-bottom: 1rem;
+    color: #3498db;
+}
+
+.section {
+    background: white;
+    padding: 1.5rem;
+    border-radius: 8px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    margin-bottom: 2rem;
+}
+
+input[type="file"] {
+    width: 100%;
+    padding: 1rem;
+    border: 2px dashed #ddd;
+    border-radius: 5px;
+    margin-bottom: 1rem;
+    cursor: pointer;
+}
+
+textarea {
+    width: 100%;
+    height: 120px;
+    padding: 0.8rem;
+    border: 1px solid #ddd;
+    border-radius: 5px;
+    resize: vertical;
+    margin-bottom: 1rem;
+}
+
+button {
+    background: #3498db;
+    color: white;
+    border: none;
+    padding: 0.8rem 1.5rem;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 1rem;
+    transition: background 0.3s;
+}
+
+button:hover {
+    background: #2980b9;
+}
+
+button:disabled {
+    background: #95a5a6;
+    cursor: not-allowed;
+}
+
+.aspect-ratio-selector {
+    margin-bottom: 1rem;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+select {
+    padding: 0.5rem;
+    border-radius: 5px;
+    border: 1px solid #ddd;
+}
+
+audio, img {
+    width: 100%;
+    max-width: 100%;
+    margin-bottom: 1rem;
+}
+
+.controls {
+    display: flex;
+    gap: 1rem;
+    justify-content: center;
+}
+
+.hidden {
+    display: none;
+}
+
+#encoded-image-container, #uploaded-image-container {
+    display: flex;
+    justify-content: center;
+    margin-bottom: 1rem;
+}
+
+#encoded-image, #uploaded-encoded-image {
+    max-width: 100%;
+    max-height: 500px;
+    object-fit: contain;
+}
+
+.tabs {
+    display: flex;
+    justify-content: center;
+    margin-bottom: 2rem;
+}
+
+.tab-btn {
+    background: #ecf0f1;
+    color: #7f8c8d;
+    margin: 0 0.5rem;
+}
+
+.tab-btn.active {
+    background: #3498db;
+    color: white;
+}
+
+.tab-content {
+    transition: opacity 0.3s;
+}
+
+#loading-indicator {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    margin: 2rem 0;
+}
+
+.spinner {
+    border: 5px solid #f3f3f3;
+    border-top: 5px solid #3498db;
+    border-radius: 50%;
+    width: 50px;
+    height: 50px;
+    animation: spin 1s linear infinite;
+    margin-bottom: 1rem;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
